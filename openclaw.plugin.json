@@ -1,0 +1,16 @@
+{
+  "id": "agnes",
+  "name": "Agnes",
+  "version": "1.0.0",
+  "description": "Agnes AI image + video generation",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  },
+  "contracts": {
+    "imageGenerationProviders": ["agnes1", "agnes2", "agnes3"],
+    "videoGenerationProviders": ["agnes1", "agnes2", "agnes3"],
+    "tools": ["agnes_video_status"]
+  }
+}
