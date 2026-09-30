@@ -16,10 +16,13 @@ import type {
 } from "openclaw/plugin-sdk/video-generation-core";
 
 const AGNES_PROVIDERS = [
-  { id: "agnes1", baseUrl: "https://apihub.agnes-ai.cn/v1" },
-  { id: "agnes2", baseUrl: "https://apihub.agnes-ai.cn/v1" },
-  { id: "agnes3", baseUrl: "https://apihub.agnes-ai.cn/v1" },
-  { id: "agnes5", baseUrl: "https://apihub.agnes-ai.cn/v1" },
+  { id: "agnes1", baseUrl: "https://api.agnes-ai.cn/v1" },
+  { id: "agnes2", baseUrl: "https://api.agnes-ai.cn/v1" },
+  { id: "agnes3", baseUrl: "https://api.agnes-ai.cn/v1" },
+  { id: "agnes4", baseUrl: "https://api.agnes-ai.cn/v1" },
+  { id: "agnes5", baseUrl: "https://api.agnes-ai.cn/v1" },
+  { id: "agnes6", baseUrl: "https://api.agnes-ai.cn/v1" },
+  { id: "agnes7", baseUrl: "https://api.agnes-ai.cn/v1" },
 ];
 
 const POLL_INTERVAL_MS = 5000;
@@ -253,6 +256,26 @@ function buildAgnesVideoProvider(
         body.frame_rate = 24;
       }
 
+      // Flash专属前置校验（按文档规定顺序：size → images → audios → videos）
+      if (isFlash) {
+        // size 必须为 "720P"
+        if (req.size && req.size !== "720P") {
+          throw new Error("size must be 720P");
+        }
+        // reference 图片最多5张
+        if (req.inputImages?.length > 5) {
+          throw new Error("images length must not exceed 5");
+        }
+        // reference 音频最多3段
+        if (req.inputAudios?.length > 3) {
+          throw new Error("audios length must not exceed 3");
+        }
+        // Flash 不支持 videos 输入
+        if (req.inputVideos?.length) {
+          throw new Error("videos is not supported");
+        }
+      }
+
       // Handle input images based on mode
       if (req.inputImages?.length) {
         if (isFlash) {
@@ -290,6 +313,28 @@ function buildAgnesVideoProvider(
           } else if (firstImage.buffer) {
             body.image = `data:${firstImage.mimeType || "image/png"};base64,${firstImage.buffer.toString("base64")}`;
           }
+        }
+      }
+
+      // Handle input audio (reference mode, Flash模式最多3段)
+      if (isFlash && req.inputAudios?.length) {
+        const audioUrls = req.inputAudios
+          .map((audio) => audio.url)
+          .filter((u): u is string => !!u && !u.startsWith("data:"));
+        if (audioUrls.length > 0) {
+          if (!body.mode || body.mode === "text") {
+            body.mode = "reference";
+          }
+          body.audios = audioUrls.slice(0, 3); // 限制为最大3段
+          // 更新 prompt 中的 <Audio N> 引用（如果用户prompt包含 <Audio N> 标记）
+          let updatedPrompt = req.prompt;
+          for (let i = 0; i < Math.min(audioUrls.length, 3); i++) {
+            // 如果prompt未包含 <Audio N> 标记，则自动在末尾追加引用
+            if (!updatedPrompt.includes(`<Audio ${i + 1}>`)) {
+              updatedPrompt = updatedPrompt.trimEnd() + ` <Audio ${i + 1}>`;
+            }
+          }
+          body.prompt = updatedPrompt;
         }
       }
 
@@ -420,7 +465,7 @@ function buildVideoStatusTool(api: OpenClawPluginApi) {
         return { content: [{ type: "text" as const, text: `Error: provider ${pid} not configured or missing apiKey` }] };
       }
 
-      const baseUrl = providerCfg.baseUrl || "https://apihub.agnes-ai.cn/v1";
+      const baseUrl = providerCfg.baseUrl || "https://api.agnes-ai.cn/v1";
       const pollBase = `${baseUrl.replace(/\/v1$/, "")}/agnesapi`;
 
       const queryOnce = async (modelName?: string) => {
@@ -543,7 +588,7 @@ function buildVideoTransitionTool(_api: OpenClawPluginApi) {
         return { content: [{ type: "text" as const, text: `Error: transition (keyframe) mode requires a 2.5-series model, got "${model}". Use agnes-video-2.5-flash.` }] };
       }
 
-      const baseUrl = providerCfg.baseUrl || "https://apihub.agnes-ai.cn/v1";
+      const baseUrl = providerCfg.baseUrl || "https://api.agnes-ai.cn/v1";
       const headers = {
         "Content-Type": "application/json",
         Authorization: `Bearer ${providerCfg.apiKey}`,

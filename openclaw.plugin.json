@@ -9,8 +9,8 @@
     "properties": {}
   },
   "contracts": {
-    "imageGenerationProviders": ["agnes1", "agnes2", "agnes3", "agnes4", "agnes5"],
-    "videoGenerationProviders": ["agnes1", "agnes2", "agnes3", "agnes4", "agnes5"],
+    "imageGenerationProviders": ["agnes1", "agnes2", "agnes3", "agnes4", "agnes5", "agnes6", "agnes7"],
+    "videoGenerationProviders": ["agnes1", "agnes2", "agnes3", "agnes4", "agnes5", "agnes6", "agnes7"],
     "tools": ["agnes_video_status", "agnes_video_transition"]
   }
 }
